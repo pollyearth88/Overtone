@@ -42,3 +42,4 @@ supabase/.branches/
 # dev server log
 dev.log
 dev.err.log
+ci.log
