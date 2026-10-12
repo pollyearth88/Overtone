@@ -41,7 +41,11 @@ Phase status lives in `CLAUDE.md`. This is the task-level view.
 
 ## Carried over / nice to have
 
-- [ ] Add a real GitHub remote and push (repo is local-only so far)
+- [x] Add a real GitHub remote and push — <https://github.com/pollyearth88/Overtone>
+      (note the capital O; it was created pre-flight). CI green on first run.
+- [ ] CI annotations to tidy eventually: `pnpm/action-setup@v4` still targets
+      Node 20 (deprecated, forced onto 24), and `ubuntu-latest` migrates to
+      Ubuntu 26 on 19 Oct 2026. Both are warnings, not failures.
 - [ ] Tune the dark palette once it has been looked at properly
 - [ ] Visual diff of the Home screen against the actual A3 mockup
 - [ ] Favicon and PWA icons (full manifest lands in Phase 8)
