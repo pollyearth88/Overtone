@@ -1,0 +1,122 @@
+@import 'tailwindcss';
+
+/*
+ * Overtone design tokens — see docs/DESIGN.md.
+ * Light is the locked cream + navy palette; dark is the spec's proposal.
+ *
+ * `@theme` emits the light values on :root AND registers each token with
+ * Tailwind, so `bg-bg`, `text-muted`, `border-border` etc. all exist and
+ * compile to var(--color-*). The [data-theme='dark'] block below re-binds the
+ * same custom properties, so every utility re-resolves in dark mode with no
+ * `dark:` variant needed. next-themes writes data-theme on <html>.
+ */
+
+@theme {
+  /* surfaces */
+  --color-bg: #f7f3ea; /* warm cream */
+  --color-surface: #fffcf7; /* soft ivory */
+
+  /* brand */
+  --color-primary: #183153; /* deep navy */
+  --color-primary-fg: #fffcf7; /* text/icons on primary */
+  --color-accent: #b8654b; /* muted terracotta — icons and small marks */
+  --color-accent-strong: #a65b44; /* darkened so accent-fg text clears 4.5:1 */
+  --color-accent-fg: #fffcf7;
+
+  /* text */
+  --color-text: #292d33; /* dark charcoal */
+  --color-muted: #6b655c; /* secondary text, >=4.5:1 on bg */
+
+  /* lines + tracks */
+  --color-border: #ddd6ca; /* warm gray */
+  --color-track: #e6dfd2; /* empty progress bars, waveform */
+
+  /* state — never color alone, always paired with an icon + text */
+  --color-success: #2f6b4a;
+  --color-success-tint: #e7f0e8;
+  --color-danger: #a8322d;
+  --color-danger-tint: #f6e4e1;
+
+  /* shape — spec: 14-20px on cards and buttons */
+  --radius-card: 20px;
+  --radius-control: 14px;
+
+  /* type — next/font sets the two --font-* vars in layout.tsx */
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+[data-theme='dark'] {
+  --color-bg: #14171c;
+  --color-surface: #1c2027;
+
+  --color-primary: #8fb0da;
+  --color-primary-fg: #14171c;
+  --color-accent: #d98a6f;
+  /* Dark accent already clears 4.5:1 against the dark accent-fg. */
+  --color-accent-strong: #d98a6f;
+  --color-accent-fg: #14171c;
+
+  --color-text: #ede8de;
+  --color-muted: #a39c90;
+
+  --color-border: #2e333b;
+  --color-track: #2a2f37;
+
+  --color-success: #5fb383;
+  --color-success-tint: #17291f;
+  --color-danger: #e07a6e;
+  --color-danger-tint: #2c1b1a;
+}
+
+/* `dark:` utilities follow the attribute, not prefers-color-scheme, so the
+   manual override in Settings wins over the OS setting. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Default any bare border utility to the token, not Tailwind's gray. */
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  /* Visible, consistent focus ring on every interactive element. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Spec: short, subtle transitions; respect reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
