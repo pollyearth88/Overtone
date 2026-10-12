@@ -1,0 +1,13 @@
+# Normalise to LF everywhere. Without this, core.autocrlf=true on Windows
+# checks files out with CRLF and `prettier --check` fails in CI.
+* text=auto eol=lf
+
+# Binary assets — never touch these.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
