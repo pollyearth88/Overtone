@@ -23,21 +23,36 @@ Phase status lives in `CLAUDE.md`. This is the task-level view.
 - [x] Spec folder layout stubbed out for later phases
 - [x] Verify light and dark both render
 
-## Phase 2 — Sound and music-theory engine (next)
+## Phase 2 — Sound and music-theory engine (done)
 
-- [ ] `AudioEngine` interface in `src/lib/audio`
-- [ ] `ToneAudioEngine` with Tone.js `Sampler`; piano, acoustic + electric
+- [x] `AudioEngine` interface in `src/lib/audio`
+- [x] `ToneAudioEngine` with Tone.js `Sampler`; piano, acoustic + electric
       guitar, cello, flute; lazy-load per instrument
-- [ ] Source and licence-check free samples → `public/samples/<instrument>/`,
-      record each in `docs/CREDITS.md`
-- [ ] Unlock audio on first user tap (iOS)
-- [ ] `src/lib/theory` on `tonal`: keys, scale degrees (incl. b3/#4/b7),
+- [x] Source and licence-check free samples → `public/samples/<instrument>/`,
+      record each in `docs/CREDITS.md` (49 files, 6.6 MB, CC BY 3.0)
+- [x] Unlock audio on first user tap (iOS)
+- [x] `src/lib/theory` on `tonal`: keys, scale degrees (incl. b3/#4/b7),
       intervals, chord qualities + inversions, Roman numerals
-- [ ] Cadence builder: I–IV–V–I in any key, comfortable voicing
-- [ ] Seeded RNG (mulberry32) — generators never touch `Math.random`
-- [ ] `src/lib/modes/types.ts` generator contract + the "vary the sound" rule
-- [ ] Vitest coverage: theory helpers, RNG, same seed = same questions, range
-- [ ] Hidden `/dev/sound` page to audition instruments, cadences, degrees, chords
+- [x] Cadence builder: I–IV–V–I in any key, comfortable voicing
+      (i–iv–**V**–i in minor; voice-leading voicer in `voicing.ts`)
+- [x] Seeded RNG (mulberry32) — generators never touch `Math.random`
+- [x] `src/lib/modes/types.ts` generator contract + the "vary the sound" rule
+- [x] Vitest coverage: theory helpers, RNG, same seed = same questions, range
+      — 289 tests across 15 files
+- [x] Hidden `/dev/sound` page to audition instruments, cadences, degrees, chords
+- [x] Manifest-driven `pnpm samples` downloader, so `instruments.ts` and the
+      files on disk can't drift; a test fails if a declared sample is missing
+- [x] Work around the broken `tonal` 6.5.0 packaging (pins + `pnpm tonal:check`)
+
+### Carried into Phase 3
+
+- [ ] `src/lib/modes/reference.ts` is the contract's executable example (levels
+      1–3 of the scale-degree ladder only). Phase 3 replaces it with the real
+      `scaleDegrees.ts` — move anything worth keeping, don't import from it.
+- [ ] Listen for whether the per-instrument `gainDb` trims are actually matched
+      once heard on real speakers; they were set by eye, not by ear.
+- [ ] Decide whether the flute's 5-semitone E–A sample gap is audible enough to
+      matter (it is the thinnest set upstream; nothing better is free).
 
 ## Carried over / nice to have
 

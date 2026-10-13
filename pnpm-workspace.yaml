@@ -1,2 +1,13 @@
 allowBuilds:
   unrs-resolver: true
+
+# The tonal 6.5.0 wave of @tonaljs releases switched build tool and now ship
+# `dist/index.cjs` while package.json still declares `main: dist/index.js`, so
+# nothing can resolve them — not Node, not Vite. These three are the only broken
+# ones reachable from tonal 6.4.3 (which is itself pinned exactly in
+# package.json for the same reason). Pinned to the last good publish of each.
+# Re-check with `node scripts/check-tonal-resolution.mjs` before unpinning.
+overrides:
+  '@tonaljs/pitch-distance': 5.0.5
+  '@tonaljs/pitch-interval': 6.1.0
+  '@tonaljs/pitch-note': 6.1.0

@@ -18,11 +18,9 @@ music logic and persistence can each change without a rewrite.
 
 ## Current phase
 
-**Phase 1 — Foundation: complete.** Next up is **Phase 2 — the sound and
-music-theory engine** (`docs/SPEC.md` → "Prompt 2").
-
-Phase 3 is the first point the app can actually train your ear; Phases 1–2 are
-groundwork.
+**Phase 2 — Sound and music-theory engine: complete.** Next up is **Phase 3 —
+the core scale-degree drill** (`docs/SPEC.md` → "Prompt 3"), the first point the
+app can actually train your ear.
 
 ## Decisions made in Phase 1
 
@@ -35,6 +33,30 @@ groundwork.
   reached via the wordmark; Settings via the avatar.
 - **Contrast is enforced in CI** (`pnpm contrast`), not left to review.
 
+## Decisions made in Phase 2
+
+- **The cadence does not rotate instruments.** A voiced I–IV–V–I spans about two
+  octaves; no single-octave sample set holds that, so the key reference always
+  plays on piano and only the question rotates. This is also what printed
+  functional-ear-training material does, and it keeps the reference timbrally
+  constant so only the question's colour changes.
+- **Minor cadences use a major V** (`i–iv–V–i`). Natural minor's own `v` leaves
+  the key ambiguous; the raised third is what makes the ear commit.
+- **Instruments declare a `range` narrower than their samples could stretch to**,
+  and generation refuses to place a note outside it. Past ~3 semitones of
+  pitch-shift the timbre changes audibly, which in an ear trainer is a cue the
+  user could learn _instead of_ the pitch.
+- **Voice leading is computed, not tabulated.** `voicing.ts` keeps upper voices
+  in a fixed octave window and picks the inversion that moves least. That
+  reproduces the textbook I–IV–V–I without special cases, and generalises to the
+  Phase 5 progression mode for free.
+- **`tonal` pinned to 6.4.3** plus three transitive `overrides` — the 6.5.0
+  releases are unresolvable by any bundler. See the gotcha in `CLAUDE.md`.
+- **Samples are manifest-driven.** `instruments.ts` is the source of truth for
+  both the downloader and the `Sampler` URLs, and a test fails if a declared
+  sample is missing from disk — a missing file would otherwise be a silent 404
+  and an instrument that never loads.
+
 ## Open questions
 
 - The dark palette is the spec's untested proposal. Now that it runs, does it
@@ -42,7 +64,14 @@ groundwork.
 - The A3 mockup was described in prose, not supplied as an image — the Home
   screen is built from that description. Worth a visual diff against the real
   mockup before Phase 3 locks the drill layout.
-- Sample sets (tonejs-instruments, Salamander Grand Piano) still need licence
-  review before Phase 2 commits to them; credits go in `docs/CREDITS.md`.
 - Zustand and TanStack Query are named in the spec but not yet installed — they
   arrive with Phase 3 (session state) and Phase 4 (server data).
+- The audio engine has been verified by test and by eye, **but not yet by ear**.
+  The per-instrument `gainDb` trims and the cadence tempo are first guesses;
+  `/dev/sound` is there to correct them.
+- 6.6 MB of samples sit in the repo, lazy-loaded 1–2 MB per instrument. Fine on
+  wifi; Phase 8's service worker decides whether it is fine on mobile data.
+
+Resolved in Phase 2: the sample-set licence review (all CC BY 3.0 via
+tonejs-instruments — see `docs/CREDITS.md`, which also records why Salamander
+was considered and not used).

@@ -25,14 +25,22 @@ the **question generators**, and the **data layer** (`DataStore`: `LocalStore` n
 ## Commands
 
 ```bash
-pnpm dev          # dev server on http://localhost:3000
-pnpm build        # production build
-pnpm lint         # eslint (NOT `next lint` — removed in Next 16)
-pnpm typecheck    # tsc --noEmit
-pnpm test         # vitest run
-pnpm contrast     # verify design-token contrast ratios
-pnpm format       # prettier --write
+pnpm dev            # dev server on http://localhost:3000
+pnpm build          # production build
+pnpm lint           # eslint (NOT `next lint` — removed in Next 16)
+pnpm typecheck      # tsc --noEmit
+pnpm test           # vitest run
+pnpm contrast       # verify design-token contrast ratios
+pnpm format         # prettier --write
+pnpm samples        # download instrument samples named in the audio manifest
+pnpm samples:check  # report any manifest sample missing from public/samples
+pnpm tonal:check    # diagnose the tonal packaging problem (see Gotchas)
 ```
+
+`/dev/sound` is a hidden bench for auditioning the audio engine — instruments,
+cadences, degrees, chords, noise bursts and a real generated question. Not linked
+from the app, `noindex`, but left reachable on deploys so it can be checked on a
+real phone.
 
 ## Folder layout
 
@@ -41,16 +49,19 @@ src/
   app/            routes: learn, practice, play, stats, settings, challenge/[id], auth
   components/     ui/ (design-system pieces), drill/, instruments/ (Piano, Fretboard)
                   home/, settings/ — screen-specific composites
-  lib/audio/      AudioEngine interface + ToneAudioEngine
-  lib/theory/     notes, scales, cadences (wraps tonal)
-  lib/modes/      one generator per mode: scaleDegrees, intervals, chords, progressions, dictation
+  lib/audio/      AudioEngine interface + ToneAudioEngine, event types, instrument manifest
+  lib/theory/     notes, keys, degrees, intervals, chords, romanNumerals, voicing, cadence
+  lib/modes/      types.ts (Generator contract), sound.ts ("vary the sound"), one
+                  generator per mode: scaleDegrees, intervals, chords, progressions, dictation
+  lib/rng.ts      seeded RNG (mulberry32) — generators never touch Math.random
   lib/learning/   adaptive levels, Leitner review, mastery rules, placement test
   lib/data/       DataStore interface + SupabaseStore + LocalStore (offline / signed-out)
   lib/midi/       Web MIDI input
   lib/mock/       Phase-1 placeholder data — delete as real data lands
 supabase/         migrations, seed, edge functions
-docs/             SPEC.md (the plan), DESIGN.md (tokens)
-scripts/          check-contrast.mjs
+public/samples/   instrument samples, one folder per instrument
+docs/             SPEC.md (the plan), DESIGN.md (tokens), CREDITS.md (sample licences)
+scripts/          check-contrast.mjs, fetch-samples.mjs, check-tonal-resolution.mjs
 ```
 
 ## Design tokens
@@ -117,12 +128,34 @@ labels, levels, timers, scores, chips. Shape: `rounded-card` 20px,
 - `next dev` writes and re-adds `AGENTS.md` itself — commit it, don't delete it.
   Next 16 has breaking changes vs. older docs; the real reference is
   `node_modules/next/dist/docs/`. Check there before trusting memory of Next APIs.
+- **`tonal` is pinned to exactly `6.4.3`, and three `@tonaljs/*` packages are
+  pinned under `overrides` in `pnpm-workspace.yaml`.** The 6.5.0 wave of releases
+  switched build tool and ships `dist/index.cjs` while `package.json` still says
+  `main: dist/index.js`, so _nothing_ can resolve them — not Node, not Vite, not
+  Turbopack. Symptom is `Cannot find module .../dist/index.js`. Run
+  `pnpm tonal:check` to get the named list of culprits instead of guessing, and
+  don't unpin until upstream fixes the `main` fields. Do not "fix" this with Vite
+  `mainFields`/`deps.inline`: the ESM build's CJS interop is also broken (half
+  the named exports end up under `default`), so the CJS path is the working one.
+- **Tone.js is imported dynamically** inside `ToneAudioEngine`, with a top-level
+  `import type * as Tone` for the types. A static runtime import breaks SSR and
+  bloats the initial bundle. The engine prefetches the module on construction so
+  `unlock()` inside a tap handler doesn't lose iOS's user-activation flag.
+- The React Compiler lint rules also ban **reading a mutable singleton during
+  render** and **calling `Date.now()` in component scope**. `SoundLab` mirrors
+  engine state (`unlocked`, `loaded`) into `useState` and seeds from a counter
+  rather than a clock. Fetch the engine via `getAudioEngine()` inside handlers.
+- Sample files spell sharps with `s` (`G#3` → `Gs3.mp3`); `sampleFileName()` is
+  the only place that conversion lives.
+- The **cadence never rotates instruments** — it always plays on
+  `REFERENCE_INSTRUMENT` (piano). A voiced I–IV–V–I spans ~2 octaves, which no
+  single-octave sample set can hold; only the question itself rotates.
 
 ## Phase status
 
 - [x] **Phase 1 — Foundation.** Scaffold, design tokens, base UI, app shell, Home
       screen, placeholder tabs, CI.
-- [ ] **Phase 2 — Sound and music-theory engine.** `AudioEngine` + `ToneAudioEngine`,
+- [x] **Phase 2 — Sound and music-theory engine.** `AudioEngine` + `ToneAudioEngine`,
       `tonal` theory helpers, cadence builder, seeded RNG, generator contract,
       `/dev/sound` page.
 - [ ] **Phase 3 — The core scale-degree drill.** First point the app is actually
