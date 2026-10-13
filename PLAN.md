@@ -18,9 +18,13 @@ music logic and persistence can each change without a rewrite.
 
 ## Current phase
 
-**Phase 2 — Sound and music-theory engine: complete.** Next up is **Phase 3 —
-the core scale-degree drill** (`docs/SPEC.md` → "Prompt 3"), the first point the
-app can actually train your ear.
+**Phase 3 — The core scale-degree drill: complete.** The app now actually trains
+your ear: eight levels, adaptive choices, spaced review, level tests, feedback,
+a session summary and Listen mode, all persisted locally.
+
+Next up is **Phase 4 — accounts and synced progress** (`docs/SPEC.md` →
+"Prompt 4"): Supabase migrations with RLS, auth, `SupabaseStore` behind the same
+`DataStore` interface, local→account merge, an offline queue, and Settings.
 
 ## Decisions made in Phase 1
 
@@ -56,6 +60,29 @@ app can actually train your ear.
   both the downloader and the `Sampler` URLs, and a test fails if a declared
   sample is missing from disk — a missing file would otherwise be a silent 404
   and an instrument that never loads.
+
+## Decisions made in Phase 3
+
+- **The learning engine is pure and separate from the session.** `lib/learning`
+  holds one file per rule (`adaptive`, `leitner`, `mastery`) plus `progress` to
+  compose them; `lib/session/drillStore` sequences a session but decides nothing
+  about progression. That split is why the rules are cheap to test.
+- **`LocalStore` mirrors the spec's Postgres tables field for field**, ISO
+  strings and all, so Phase 4's `SupabaseStore` is a transport change rather
+  than a data-model change.
+- **Allowed instruments are a preference, not a constraint.** Restricting the
+  drill to the flute and opening the two-octave level is unsatisfiable, so
+  `rollVoicing` substitutes a wider instrument instead of throwing.
+- **A level test never costs anything.** Failing changes nothing — no demotion,
+  no lost choices. A bad test is information, and it can be retaken.
+- **Moving level resets earned choices** to the starting two, because the answer
+  set is genuinely different: earning all seven major degrees says nothing about
+  readiness for all twelve chromatic ones.
+- **Level 8 keeps `reference` populated** and flags `autoPlayReference: false`.
+  The level withholds the cadence from automatic playback, not from a user who
+  presses Replay.
+- **The drill runs in a `FocusLayer`** that covers the tab bar, rather than
+  restructuring Phase 1's root layout into route groups. Revisit in Phase 8.
 
 ## Open questions
 

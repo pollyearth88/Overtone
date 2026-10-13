@@ -18,7 +18,12 @@
  * and has the side benefit of keeping the key reference timbrally constant.
  */
 
-import { getInstrument, type InstrumentId, DEFAULT_INSTRUMENT } from '../audio/instruments';
+import {
+  DEFAULT_INSTRUMENT,
+  INSTRUMENT_IDS,
+  getInstrument,
+  type InstrumentId,
+} from '../audio/instruments';
 import type { AudioEvent } from '../audio/events';
 import { midiOf, type NoteName } from '../theory/notes';
 import type { Key } from '../theory/keys';
@@ -116,7 +121,16 @@ export function rollVoicing(
       ? settings.instruments
       : [DEFAULT_INSTRUMENT];
 
-  const candidates = usableInstruments(allowed, request, key.tonic);
+  const preferred = usableInstruments(allowed, request, key.tonic);
+
+  // The allowed set is a *preference*, and it yields to playability. A user who
+  // has narrowed the drill to the flute and then opens a two-octave level has
+  // asked for something the flute's sampled range cannot cover; hearing a piano
+  // is a far better outcome than a crashed session. Only a request no
+  // instrument at all can satisfy is an actual error.
+  const candidates =
+    preferred.length > 0 ? preferred : usableInstruments(INSTRUMENT_IDS, request, key.tonic);
+
   if (candidates.length === 0) throw new NoPlayableVoicingError(request, key.tonic);
 
   const instrument = rng.pick(candidates);

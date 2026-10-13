@@ -46,13 +46,53 @@ Phase status lives in `CLAUDE.md`. This is the task-level view.
 
 ### Carried into Phase 3
 
-- [ ] `src/lib/modes/reference.ts` is the contract's executable example (levels
-      1–3 of the scale-degree ladder only). Phase 3 replaces it with the real
-      `scaleDegrees.ts` — move anything worth keeping, don't import from it.
+- [x] `src/lib/modes/reference.ts` replaced by the real `scaleDegrees.ts` and
+      deleted; its contract tests moved onto the new generator.
 - [ ] Listen for whether the per-instrument `gainDb` trims are actually matched
       once heard on real speakers; they were set by eye, not by ear.
 - [ ] Decide whether the flute's 5-semitone E–A sample gap is audible enough to
       matter (it is the thinnest set upstream; nothing better is free).
+
+## Phase 3 — The core scale-degree drill (done)
+
+- [x] `scaleDegrees.ts` with the spec's full 8-rung ladder: 1 vs 5 → +3 →
+      1-3-5+6 → all 7 → two octaves → chromatic → minor keys → no cadence replay
+- [x] `lib/learning/adaptive.ts` — 2 choices, +1 at ≥85% and median <3 s over 20
+- [x] `lib/learning/leitner.ts` — 5 boxes, miss resets to box 1, box 1 returns
+      inside the same session
+- [x] `lib/learning/mastery.ts` — 15-question tests, pass at 90% (14/15),
+      session scoring, weakest-item breakdown with confusions
+- [x] `lib/learning/progress.ts` — composes the three rules onto stored progress
+- [x] `DataStore` interface + `LocalStore` on IndexedDB (idb-keyval), shaped to
+      mirror the spec's Postgres tables so Phase 4 is a transport swap
+- [x] `lib/session/drillStore.ts` — the live Zustand session
+- [x] Drill screen: close, progress, combo, context chips, round play button,
+      Replay cadence, 4-column degree grid with solfège, locked ones dimmed
+- [x] Feedback: check/X + icon + text (never colour alone), degree + solfège,
+      time taken, the degree's "feel" line, auto-advance on correct (switchable),
+      wrong answers play the tonic next to the target
+- [x] Keyboard shortcuts: 1–7 answer, space replays note, C replays cadence,
+      Enter next
+- [x] Session summary: accuracy, median, best combo, weakest degrees with what
+      they were confused with, Practice again / Take level test
+- [x] Listen mode — hands-free labelled exposure, label shown before the note
+- [x] Learn tab with the level ladder (locked/current/mastered, any level openable)
+- [x] Practice tab entry point showing what is due for review
+- [x] Home "Your skills" reads real saved progress for scale degrees
+- [x] Tests: adaptive rules, Leitner scheduling, mastery/scoring, progress
+      composition, the generator, `LocalStore`, and the session flow — 489 total
+
+### Carried into Phase 4
+
+- [ ] The drill has been verified by test and by route smoke-check, **not yet by
+      ear end-to-end** — play a full session and check the audio timing feels right.
+- [ ] `DEFAULT_DRILL_SETTINGS` hard-codes all five instruments and
+      `autoAdvance: true`. Phase 4's Settings page should own these.
+- [ ] Streak, daily challenge and friend-challenge rows on Home are still mock
+      (`src/lib/mock/home.ts`) — Phases 6 and 7.
+- [ ] `levelProgress` caps at 70% until the level test is passed. Worth a look
+      once there is real usage: it may read as "stuck" to someone who has
+      unlocked every choice.
 
 ## Carried over / nice to have
 

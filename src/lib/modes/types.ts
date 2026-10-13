@@ -52,10 +52,17 @@ export interface GeneratorSettings {
   /** Noise or silence between questions. */
   separator?: SeparatorKind;
   /**
-   * Whether the key reference (the cadence) plays before every question. The
-   * top scale-degree level turns this off — "no cadence replay".
+   * Whether the key reference (the cadence) plays before every question. This
+   * is the *user's* preference; a level may still override it to off, since
+   * "no cadence replay" is itself a rung on the scale-degree ladder.
    */
   playReference?: boolean;
+  /**
+   * How many of the level's answer choices the user has earned, from the
+   * learning engine's adaptive rule. Omitted means "all of them" — which is
+   * what a level test, the daily challenge and `/dev/sound` want.
+   */
+  unlockedChoices?: number;
   /** Fix the instrument instead of rotating. Used by `/dev/sound` and Listen mode. */
   fixedInstrument?: InstrumentId;
   /** Fix the key instead of rotating. */
@@ -112,10 +119,19 @@ export interface Question {
   /** The sound being tested. */
   audio: readonly AudioEvent[];
   /**
-   * The cadence, tonic or chord root that frames the question. Empty when the
-   * level has turned the reference off.
+   * The cadence, tonic or chord root that frames the question.
+   *
+   * Always populated, even when it will not be played automatically — the
+   * drill's "Replay cadence" button needs something to play, and a level that
+   * withholds the cadence is withholding it from the *automatic* playback, not
+   * from a user who asks.
    */
   reference: readonly AudioEvent[];
+  /**
+   * Whether the drill should play `reference` before the question without being
+   * asked. False on levels that exist to take the cadence away.
+   */
+  autoPlayReference: boolean;
   /** Played after this question, before the next. */
   separator: readonly AudioEvent[];
   /** Replayed on answering — the target next to its reference. */

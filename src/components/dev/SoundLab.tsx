@@ -9,7 +9,7 @@ import { CheckIcon, PlayIcon, XIcon } from '@/components/ui/icons';
 import { getAudioEngine } from '@/lib/audio/ToneAudioEngine';
 import { concatEvents, type AudioEvent } from '@/lib/audio/events';
 import { ALL_INSTRUMENTS, type InstrumentId } from '@/lib/audio/instruments';
-import { referenceGenerator } from '@/lib/modes/reference';
+import { scaleDegreesGenerator } from '@/lib/modes/scaleDegrees';
 import { REFERENCE_INSTRUMENT } from '@/lib/modes/sound';
 import { buildCadence, cadenceChords } from '@/lib/theory/cadence';
 import {
@@ -168,9 +168,9 @@ export function SoundLab() {
    */
   const playGeneratedQuestion = () => {
     setQuestionSeed(questionSeed + 1);
-    const [question] = referenceGenerator.generate({
+    const [question] = scaleDegreesGenerator.generate({
       seed: `lab-${questionSeed}`,
-      level: 3,
+      level: 4, // all seven major degrees, one octave
       count: 1,
       settings: { instruments: [instrument], fixedKey: key },
     }).questions;

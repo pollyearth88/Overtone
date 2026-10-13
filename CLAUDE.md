@@ -11,7 +11,7 @@ the short version. `docs/DESIGN.md` is the design system.
 ## Stack
 
 - **App:** Next.js 16 (App Router) + TypeScript, pnpm, Tailwind CSS v4, `next-themes`.
-- **State:** Zustand (live session), TanStack Query (server data). _Not yet installed._
+- **State:** Zustand (live session). TanStack Query (server data) _not yet installed_ — Phase 4.
 - **Audio:** Tone.js `Sampler` per instrument, real samples, lazy-loaded, SW-cached.
 - **Music logic:** `tonal`; all generation pure + seeded (same seed = same questions).
 - **Backend:** Supabase (Auth + Postgres with RLS + Edge Functions).
@@ -51,11 +51,12 @@ src/
                   home/, settings/ — screen-specific composites
   lib/audio/      AudioEngine interface + ToneAudioEngine, event types, instrument manifest
   lib/theory/     notes, keys, degrees, intervals, chords, romanNumerals, voicing, cadence
-  lib/modes/      types.ts (Generator contract), sound.ts ("vary the sound"), one
-                  generator per mode: scaleDegrees, intervals, chords, progressions, dictation
+  lib/modes/      types.ts (Generator contract), sound.ts ("vary the sound"),
+                  scaleDegrees.ts; intervals/chords/progressions/dictation in Phase 5
   lib/rng.ts      seeded RNG (mulberry32) — generators never touch Math.random
-  lib/learning/   adaptive levels, Leitner review, mastery rules, placement test
-  lib/data/       DataStore interface + SupabaseStore + LocalStore (offline / signed-out)
+  lib/learning/   adaptive.ts, leitner.ts, mastery.ts, progress.ts (composes them)
+  lib/session/    drillStore.ts — the live Zustand session
+  lib/data/       DataStore interface + LocalStore (IndexedDB); SupabaseStore in Phase 4
   lib/midi/       Web MIDI input
   lib/mock/       Phase-1 placeholder data — delete as real data lands
 supabase/         migrations, seed, edge functions
@@ -150,6 +151,21 @@ labels, levels, timers, scores, chips. Shape: `rounded-card` 20px,
 - The **cadence never rotates instruments** — it always plays on
   `REFERENCE_INSTRUMENT` (piano). A voiced I–IV–V–I spans ~2 octaves, which no
   single-octave sample set can hold; only the question itself rotates.
+- **The allowed-instrument list is a preference, not a constraint.**
+  `rollVoicing` falls back to any instrument that can reach the question rather
+  than throwing — a user who restricts the drill to flute and opens the
+  two-octave level would otherwise crash the session.
+- **Only the drill screen plays a question automatically.** `drillStore.next()`
+  deliberately does not play; an effect keyed on the question id does. Doing
+  both sounds every question twice.
+- Level 8 ("no cadence replay") still populates `Question.reference` — it
+  withholds the cadence from _automatic_ playback, not from the Replay button.
+  `autoPlayReference` is the flag to read.
+- `FocusLayer` paints a fixed overlay over the app shell for the drill, so the
+  tab bar can't be tapped mid-session. Phase 8's desktop layout should replace
+  it with proper route groups.
+- `LocalStore` is key/value, so every write is read-modify-write serialised
+  through `mutate()`. Answers are capped at 5000, oldest dropped.
 
 ## Phase status
 
@@ -158,7 +174,7 @@ labels, levels, timers, scores, chips. Shape: `rounded-card` 20px,
 - [x] **Phase 2 — Sound and music-theory engine.** `AudioEngine` + `ToneAudioEngine`,
       `tonal` theory helpers, cadence builder, seeded RNG, generator contract,
       `/dev/sound` page.
-- [ ] **Phase 3 — The core scale-degree drill.** First point the app is actually
+- [x] **Phase 3 — The core scale-degree drill.** First point the app is actually
       usable: generator, learning engine (adaptive choices, Leitner, level tests),
       drill screen, feedback, session summary, Listen mode, Learn tab, `LocalStore`.
 - [ ] **Phase 4 — Accounts and synced progress.** Supabase migrations + RLS, auth,

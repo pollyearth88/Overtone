@@ -8,9 +8,12 @@ import { greetingFor, mockHome } from '@/lib/mock/home';
 // Phase 6 replaces this with the user's own time zone.
 export const dynamic = 'force-dynamic';
 
-// Phase 1 reads placeholder data; Phase 3 swaps in the real DataStore.
+// Scale degrees now reads real progress from the DataStore (inside SkillList,
+// which is a client component because IndexedDB is client-only). The streak,
+// daily challenge and friend challenge are still mock — Phase 6 and 7.
 export default function HomePage() {
   const { displayName, initials, streak, daily, skills, friendChallenge } = mockHome;
+  const placeholders = skills.filter((skill) => skill.mode !== 'scaleDegrees');
 
   return (
     <>
@@ -26,7 +29,7 @@ export default function HomePage() {
 
         <DailyChallengeCard daily={daily} />
 
-        <SkillList skills={skills} />
+        <SkillList placeholders={placeholders} />
 
         <section aria-labelledby="head-to-head">
           <h2 id="head-to-head" className="mb-2.5 text-base font-semibold">
