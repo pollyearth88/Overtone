@@ -44,6 +44,32 @@
   /* type — next/font sets the two --font-* vars in layout.tsx */
   --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /*
+   * Shake — the drill's answer to pressing the key for a locked degree. Small
+   * and once only; the reduced-motion block at the bottom of this file already
+   * neutralises it for anyone who has asked for less movement.
+   */
+  --animate-shake: shake 320ms ease-in-out;
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-3px);
+    }
+    40% {
+      transform: translateX(3px);
+    }
+    60% {
+      transform: translateX(-2px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
 }
 
 [data-theme='dark'] {

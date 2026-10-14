@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/Button';
@@ -15,14 +15,23 @@ import { getInstrument } from '@/lib/audio/instruments';
 import { useDrillStore } from '@/lib/session/drillStore';
 import { keyLabel } from '@/lib/theory/keys';
 import { levelSpec } from '@/lib/modes/scaleDegrees';
+import { degreeForShortcut, numberFromKeyCode } from '@/lib/modes/degreeShortcuts';
+import { ADAPTIVE_MIN_ACCURACY, ADAPTIVE_WINDOW } from '@/lib/learning/adaptive';
 
 export interface ScaleDegreeDrillProps {
   level: number;
   kind: 'practice' | 'test';
 }
 
+/** Matches `--animate-shake` in globals.css. */
+const SHAKE_MS = 320;
+
 export function ScaleDegreeDrill({ level, kind }: ScaleDegreeDrillProps) {
   const router = useRouter();
+  const [shake, setShake] = useState<{ id: string | null; nonce: number }>({
+    id: null,
+    nonce: 0,
+  });
 
   const phase = useDrillStore((state) => state.phase);
   const error = useDrillStore((state) => state.error);
@@ -56,12 +65,14 @@ export function ScaleDegreeDrill({ level, kind }: ScaleDegreeDrillProps) {
   }, [start, reset, level, kind]);
 
   /**
-   * Desktop shortcuts: 1-7 answer, space replays the note, C replays the
-   * cadence, Enter is next. Registered on `window` rather than a focused
-   * element, because the drill has no single thing that holds focus.
+   * Desktop shortcuts. A number key is the degree as the current key writes it,
+   * Shift reaches the altered one; space replays the note, C the cadence, Enter
+   * advances. Registered on `window` rather than a focused element, because the
+   * drill has nothing that holds focus.
    */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      // Shift is part of the answer chord here, so only the other modifiers bail.
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
       const target = event.target;
@@ -90,21 +101,39 @@ export function ScaleDegreeDrill({ level, kind }: ScaleDegreeDrillProps) {
         return;
       }
 
-      // Number keys map to the nth *unlocked* choice, so 1-7 always line up
-      // with what is actually pressable.
-      if (/^[1-9]$/.test(event.key) && state.phase === 'asking') {
-        const position = Number(event.key) - 1;
-        const choice = current.choices.filter((candidate) => !candidate.locked)[position];
-        if (choice) {
-          event.preventDefault();
-          void state.answer(choice.id);
-        }
+      if (state.phase !== 'asking') return;
+
+      const number = numberFromKeyCode(event.code);
+      if (number === null) return;
+
+      const degree = degreeForShortcut(number, event.shiftKey, current.voicing.key.mode);
+      if (!degree) return;
+
+      const choice = current.choices.find((candidate) => candidate.id === degree);
+      // The degree is not on this level at all: not our key press.
+      if (!choice) return;
+
+      event.preventDefault();
+
+      if (choice.locked) {
+        // Say "not yet" rather than silently swallowing the press.
+        setShake((previous) => ({ id: degree, nonce: previous.nonce + 1 }));
+        return;
       }
+
+      void state.answer(choice.id);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  // Clear the shake once its animation has run, so the class comes back off.
+  useEffect(() => {
+    if (shake.id === null) return;
+    const timer = setTimeout(() => setShake({ id: null, nonce: 0 }), SHAKE_MS);
+    return () => clearTimeout(timer);
+  }, [shake]);
 
   /**
    * Plays whichever question has just become current.
@@ -163,6 +192,8 @@ export function ScaleDegreeDrill({ level, kind }: ScaleDegreeDrillProps) {
   }
 
   const instrument = getInstrument(question.voicing.instrument);
+  const unlockedCount = question.choices.filter((choice) => !choice.locked).length;
+  const lockedCount = question.choices.length - unlockedCount;
   const showFeedback = phase === 'feedback' && lastAnswer !== null;
   // Auto-advance handles the Next button on a correct answer, so showing one
   // would just race the timer.
@@ -206,14 +237,25 @@ export function ScaleDegreeDrill({ level, kind }: ScaleDegreeDrillProps) {
       <DegreeGrid
         choices={question.choices}
         onAnswer={(choiceId) => void answer(choiceId)}
+        keyMode={question.voicing.key.mode}
         disabled={phase !== 'asking'}
         correctId={showFeedback ? lastAnswer.correctId : null}
         chosenId={showFeedback ? lastAnswer.chosenId : null}
+        shakeId={shake.id}
+        shakeNonce={shake.nonce}
       />
 
+      {lockedCount > 0 ? (
+        <p className="text-muted text-center text-xs">
+          {unlockedCount} of {question.choices.length} unlocked — get{' '}
+          {Math.round(ADAPTIVE_MIN_ACCURACY * 100)}% over {ADAPTIVE_WINDOW} answers to unlock the
+          next one
+        </p>
+      ) : null}
+
       <p className="text-muted hidden text-center text-xs sm:block">
-        Keys: 1–{question.choices.filter((choice) => !choice.locked).length} answer · Space replays
-        the note · C replays the cadence · Enter for next
+        Number = degree · Shift = altered · Space replays the note · C replays the cadence · Enter
+        for next
       </p>
 
       <div className="mt-auto pt-2">

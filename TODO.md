@@ -111,11 +111,41 @@ Phase status lives in `CLAUDE.md`. This is the task-level view.
       Windows (`0xC00000FD`), failing a different file each run; the suite now
       runs in ~5 s instead of ~13 s.
 
+## Phase 3 follow-ups — drill keyboard + locked-state polish (done)
+
+- [x] Keyboard mapping rebuilt in `src/lib/modes/degreeShortcuts.ts`. A number
+      key is the degree **as the current key writes it** (in minor, `3` is `♭3`),
+      and Shift reaches the altered one — lowering in major, raising in minor.
+      `⇧2` is always `♭2` and `⇧4` always `♯4`, since those slots only have one
+      direction available. Both modes cover all twelve degrees, no collisions.
+- [x] Reads `event.code`, not `event.key`: on most layouts Shift+3 arrives as
+      `#`, so the digit is only recoverable from the physical key.
+- [x] Pressing the key for a locked degree shakes that button instead of doing
+      nothing silently (`--animate-shake`; the global reduced-motion block
+      already neutralises it)
+- [x] Shortcut shown in the corner of each unlocked button (`3`, `⇧3`); hint
+      line now reads "Number = degree · Shift = altered · Space replays the
+      note · C replays the cadence · Enter for next"
+- [x] Locked buttons: no fill, dashed border, muted text, lock icon, genuinely
+      `disabled`, `aria-disabled`, out of the tab order, labelled "♭2, Ra, locked"
+- [x] Line under the grid: "3 of 12 unlocked — get 85% over 20 answers to
+      unlock the next one" (only while something is locked)
+- [x] Grid columns by answer count: 2–4 one row, 5–8 two rows of four, 9 as
+      3×3, 12 as 4×3
+- [x] Minor levels already ordered by pitch (`1 2 ♭3 4 5 ♭6 6 ♭7 7`) — now
+      asserted rather than incidental
+- [x] Tests: the key mapping in both modes (coverage, no collisions, round-trip,
+      `b3`/`3` and `b7`/`7` distinguishable), plus a component test for the
+      locked state, shortcut badges, grid columns and button order
+
 ### Carried into Phase 4
 
 - [ ] The drill has been verified by test and by route smoke-check; the two
       timings are now confirmed by ear, but a full end-to-end session on the new
-      level-start behaviour has not been played yet.
+      level-start behaviour and keyboard mapping has not been played yet.
+- [ ] The shortcut badges assume a physical keyboard. On touch they are noise —
+      worth hiding below `sm:` alongside the hint line once there is a view on
+      how it actually looks on a phone.
 - [ ] `DEFAULT_DRILL_SETTINGS` hard-codes all five instruments, `autoAdvance`,
       `autoAdvanceMs` and `cadenceGapMs`. Phase 4's Settings page should own all
       four.
