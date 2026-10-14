@@ -13,7 +13,12 @@ import type { SkillProgress } from '@/lib/data/types';
 import { adaptiveReadiness, ADAPTIVE_WINDOW } from '@/lib/learning/adaptive';
 import { levelProgress } from '@/lib/learning/mastery';
 import { isLevelMastered, isLevelUnlocked, newSkillProgress } from '@/lib/learning/progress';
-import { SCALE_DEGREE_LEVELS, levelChoiceCount } from '@/lib/modes/scaleDegrees';
+import {
+  SCALE_DEGREE_LEVELS,
+  carriesForwardInto,
+  levelChoiceCount,
+  levelStarterCount,
+} from '@/lib/modes/scaleDegrees';
 import { cn } from '@/lib/cn';
 
 type LevelState = 'mastered' | 'current' | 'unlocked' | 'locked';
@@ -76,6 +81,9 @@ export function LevelLadder() {
 
   const current = progress.level;
   const totalChoices = levelChoiceCount(current);
+  const carriedForward = carriesForwardInto(current, progress.masteredLevels);
+  const starterChoices = levelStarterCount(current, carriedForward);
+  const carriedCount = current > 1 && carriedForward ? starterChoices - 1 : 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,6 +94,7 @@ export function LevelLadder() {
         <p className="mt-1 text-lg font-semibold">Level {current}</p>
         <p className="text-primary-fg/80 mt-0.5 text-sm">
           {progress.unlockedChoices} of {totalChoices} answers unlocked
+          {carriedCount > 0 ? ` · ${carriedCount} carried forward` : ''}
         </p>
         <ProgressBar
           className="mt-3"
@@ -93,6 +102,7 @@ export function LevelLadder() {
           value={levelProgress({
             unlockedChoices: progress.unlockedChoices,
             totalChoices,
+            starterChoices,
             readiness,
             mastered: isLevelMastered(progress, current),
           })}
@@ -160,7 +170,7 @@ export function LevelLadder() {
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">{spec.label}</span>
                     <span className="text-muted block text-xs">
-                      {spec.degrees.length} degrees ·{' '}
+                      {levelChoiceCount(spec.level)} degrees ·{' '}
                       {spec.keys[0]?.mode === 'minor' ? 'minor keys' : 'major keys'}
                       {spec.octaveSpan === 2 ? ' · two octaves' : ''}
                       {spec.replayCadence ? '' : ' · no cadence replay'}
@@ -185,8 +195,10 @@ export function LevelLadder() {
           })}
         </ul>
         <p className="text-muted mt-2.5 text-xs">
-          Any level can be opened at any time. Passing a level test at 90% unlocks the next one and
-          marks this one mastered.
+          Any level can be opened at any time. Passing a level test at 90% unlocks the next one,
+          marks this one mastered, and carries its answers forward so the next level starts where
+          this one left off. Opening a level you have not earned starts you with 1, 5 and that
+          level&rsquo;s first new degree.
         </p>
       </section>
     </div>

@@ -25,7 +25,15 @@ import {
   PRACTICE_QUESTION_COUNT,
   summariseAnswers,
 } from '../learning/mastery';
-import { levelChoiceCount, questionSequence, scaleDegreesGenerator } from '../modes/scaleDegrees';
+import {
+  DEFAULT_CADENCE_GAP_SECONDS,
+  carriesForwardInto,
+  levelChoiceCount,
+  levelStarterCount,
+  questionSequence,
+  scaleDegreesGenerator,
+  unlockedChoiceIds,
+} from '../modes/scaleDegrees';
 import type { Question, SessionKind } from '../modes/types';
 import { keyId } from '../theory/keys';
 
@@ -45,14 +53,28 @@ export interface DrillSettings {
   instruments: readonly InstrumentId[];
   /** Auto-advance after a correct answer. The spec makes this switchable. */
   autoAdvance: boolean;
-  /** Milliseconds to hold correct feedback before advancing. */
+  /**
+   * Milliseconds to hold correct feedback before advancing. Long enough to read
+   * the degree name and its "feel" line without the session dragging.
+   */
   autoAdvanceMs: number;
+  /**
+   * Milliseconds between the cadence ending and the target note sounding.
+   * Long enough for the key to settle, short enough that the two still feel
+   * like one phrase.
+   */
+  cadenceGapMs: number;
 }
 
+/**
+ * Both timings were checked by ear and left where they are. Phase 4's Settings
+ * page takes ownership of all four of these.
+ */
 export const DEFAULT_DRILL_SETTINGS: DrillSettings = {
   instruments: ['piano', 'guitar-acoustic', 'guitar-electric', 'cello', 'flute'],
   autoAdvance: true,
   autoAdvanceMs: 1400,
+  cadenceGapMs: DEFAULT_CADENCE_GAP_SECONDS * 1000,
 };
 
 interface StartOptions {
@@ -188,7 +210,16 @@ export const useDrillStore = create<DrillState>((set, getState) => {
 
       try {
         const existing = (await store.getSkillProgress(MODE)) ?? newSkillProgress(MODE);
-        const progress = setLevel(existing, options.level);
+
+        // A level starts with everything the level below it ended with, plus
+        // its first new item — not a flat two. Whether those carry forward
+        // depends on having actually mastered the level below.
+        const carriedForward = carriesForwardInto(options.level, existing.masteredLevels);
+        const progress = setLevel(
+          existing,
+          options.level,
+          levelStarterCount(options.level, carriedForward),
+        );
         if (progress !== existing) await store.saveSkillProgress(progress);
 
         const count = options.kind === 'test' ? LEVEL_TEST_QUESTION_COUNT : PRACTICE_QUESTION_COUNT;
@@ -211,7 +242,15 @@ export const useDrillStore = create<DrillState>((set, getState) => {
             instruments: settings.instruments,
             // A test measures the level, so it asks the whole level. Practice
             // only asks what the adaptive rule has unlocked.
-            ...(options.kind === 'test' ? {} : { unlockedChoices: progress.unlockedChoices }),
+            ...(options.kind === 'test'
+              ? {}
+              : {
+                  unlockedChoiceIds: unlockedChoiceIds(
+                    options.level,
+                    progress.unlockedChoices,
+                    carriedForward,
+                  ),
+                }),
           },
         });
 
@@ -248,7 +287,7 @@ export const useDrillStore = create<DrillState>((set, getState) => {
       // against the *previous* question and come out absurdly long.
       askedAt = now();
 
-      await play(questionSequence(question));
+      await play(questionSequence(question, getState().settings.cadenceGapMs / 1000));
 
       // Normally the clock starts when the sound stops, so a long cadence is
       // not counted as thinking time.

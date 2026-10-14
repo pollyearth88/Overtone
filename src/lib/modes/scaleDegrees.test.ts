@@ -15,11 +15,13 @@ import {
   buildKeyReference,
   degreeFromItemKey,
   levelChoiceCount,
+  levelDegrees,
   levelSpec,
   parseLevel,
   questionSequence,
   scaleDegreeItemKey,
   scaleDegreesGenerator,
+  unlockedChoiceIds,
   unlockedDegrees,
 } from './scaleDegrees';
 import { REFERENCE_INSTRUMENT, notesFitInstrument } from './sound';
@@ -29,7 +31,6 @@ import { INSTRUMENT_IDS, getInstrument } from '../audio/instruments';
 import {
   CHROMATIC_DEGREES,
   MAJOR_DEGREES,
-  NATURAL_MINOR_DEGREES,
   degreeLabel,
   isDegree,
   noteToDegree,
@@ -64,10 +65,10 @@ describe('the ladder matches the spec', () => {
   });
 
   it('walks 1-vs-5 → add 3 → +6 → all seven', () => {
-    expect(levelSpec(1).degrees).toEqual(['1', '5']);
-    expect(levelSpec(2).degrees).toEqual(['1', '3', '5']);
-    expect(levelSpec(3).degrees).toEqual(['1', '3', '5', '6']);
-    expect(levelSpec(4).degrees).toEqual([...MAJOR_DEGREES]);
+    expect(levelDegrees(1)).toEqual(['1', '5']);
+    expect(levelDegrees(2)).toEqual(['1', '3', '5']);
+    expect(levelDegrees(3)).toEqual(['1', '3', '5', '6']);
+    expect(levelDegrees(4)).toEqual([...MAJOR_DEGREES]);
   });
 
   it('opens a second octave at level 5', () => {
@@ -76,12 +77,11 @@ describe('the ladder matches the spec', () => {
   });
 
   it('adds the chromatic degrees at level 6', () => {
-    expect(levelSpec(6).degrees).toEqual([...CHROMATIC_DEGREES]);
-    expect(levelSpec(6).degrees).toHaveLength(12);
+    expect(levelDegrees(6)).toEqual([...CHROMATIC_DEGREES]);
+    expect(levelDegrees(6)).toHaveLength(12);
   });
 
   it('switches to minor keys at level 7', () => {
-    expect(levelSpec(7).degrees).toEqual([...NATURAL_MINOR_DEGREES]);
     expect(levelSpec(7).keys.every((key) => key.mode === 'minor')).toBe(true);
   });
 
@@ -93,8 +93,8 @@ describe('the ladder matches the spec', () => {
 
   it('only ever grows the degree set, rung by rung, through level 4', () => {
     for (let level = 2; level <= 4; level += 1) {
-      const previous = levelSpec(level - 1).degrees;
-      const current = levelSpec(level).degrees;
+      const previous = levelDegrees(level - 1);
+      const current = levelDegrees(level);
       expect(current.length).toBeGreaterThan(previous.length);
       // Everything already learned is still in play.
       for (const degree of previous) expect(current).toContain(degree);
@@ -132,32 +132,40 @@ describe('parseLevel', () => {
 });
 
 describe('unlockedDegrees and buildChoices', () => {
-  it('trims the level set to what has been earned', () => {
-    expect(unlockedDegrees(4, 2)).toEqual(['1', '2']);
-    expect(unlockedDegrees(4, 5)).toEqual(['1', '2', '3', '4', '5']);
+  it('trims the level set to what has been earned, in unlock order', () => {
+    // Level 6 carries the seven major degrees in, so its floor is eight.
+    expect(unlockedDegrees(6, 8)).toEqual(['1', '5', '3', '6', '7', '2', '4', 'b7']);
+    expect(unlockedDegrees(6, 10)).toEqual(['1', '5', '3', '6', '7', '2', '4', 'b7', 'b3', 'b6']);
   });
 
   it('returns the whole set when nothing is specified — tests and the daily', () => {
-    expect(unlockedDegrees(4)).toEqual([...MAJOR_DEGREES]);
+    expect([...unlockedDegrees(4)].sort()).toEqual([...MAJOR_DEGREES].sort());
   });
 
-  it('never drops below two, so a question is always answerable', () => {
-    expect(unlockedDegrees(4, 0)).toHaveLength(2);
-    expect(unlockedDegrees(4, 1)).toHaveLength(2);
-    expect(unlockedDegrees(4, -5)).toHaveLength(2);
+  it('never drops below the level starter count', () => {
+    // Level 4 carries 1-5-3-6 in and adds 7, so its floor is five.
+    expect(unlockedDegrees(4, 0)).toHaveLength(5);
+    expect(unlockedDegrees(4, 1)).toHaveLength(5);
+    expect(unlockedDegrees(4, -5)).toHaveLength(5);
+    // Entered cold, the floor is the three-degree starter set.
+    expect(unlockedDegrees(4, 0, false)).toHaveLength(3);
   });
 
   it('never exceeds the level set', () => {
     expect(unlockedDegrees(1, 99)).toEqual(['1', '5']);
+    expect(unlockedDegrees(6, 99)).toHaveLength(12);
   });
 
   it('shows every degree the level will ask, dimming the unearned ones', () => {
-    const choices = buildChoices(4, 3);
+    // Entered cold, level 4 opens with 1, 5 and its first new degree, 7.
+    const choices = buildChoices(4, unlockedChoiceIds(4, 3, false));
     expect(choices).toHaveLength(7);
+    // Grid order is ascending pitch; unlock order is by difficulty.
+    expect(choices.map((choice) => choice.id)).toEqual([...MAJOR_DEGREES]);
     expect(choices.filter((choice) => !choice.locked).map((choice) => choice.id)).toEqual([
       '1',
-      '2',
-      '3',
+      '5',
+      '7',
     ]);
     expect(choices.filter((choice) => choice.locked)).toHaveLength(4);
   });
@@ -362,7 +370,7 @@ describe('the question asks what it claims to', () => {
 
   it('only asks about degrees the level offers', () => {
     for (const level of ALL_LEVELS) {
-      const offered = levelSpec(level).degrees;
+      const offered = levelDegrees(level);
       const { questions } = scaleDegreesGenerator.generate(input({ level, count: 40 }));
       for (const question of questions) {
         expect(offered, `level ${level}`).toContain(question.correctChoiceId);
@@ -372,10 +380,10 @@ describe('the question asks what it claims to', () => {
 
   it('only asks about unlocked degrees when choices are limited', () => {
     const { questions } = scaleDegreesGenerator.generate(
-      input({ level: 4, count: 40, settings: settings({ unlockedChoices: 3 }) }),
+      input({ level: 4, count: 40, settings: settings({ unlockedChoiceIds: ['1', '5', '3'] }) }),
     );
     for (const question of questions) {
-      expect(['1', '2', '3']).toContain(question.correctChoiceId);
+      expect(['1', '5', '3']).toContain(question.correctChoiceId);
     }
   });
 
@@ -396,9 +404,13 @@ describe('the question asks what it claims to', () => {
 
   it('always has the correct answer among the choices, and unlocked', () => {
     for (const level of ALL_LEVELS) {
-      for (const unlockedChoices of [2, 3, 7, undefined]) {
+      for (const count of [2, 3, 7, undefined]) {
         const { questions } = scaleDegreesGenerator.generate(
-          input({ level, count: 20, settings: settings({ unlockedChoices }) }),
+          input({
+            level,
+            count: 20,
+            settings: settings({ unlockedChoiceIds: unlockedChoiceIds(level, count) }),
+          }),
         );
         for (const question of questions) {
           const correct = question.choices.find((choice) => choice.id === question.correctChoiceId);
@@ -583,16 +595,18 @@ describe('spaced review', () => {
   });
 
   it('ignores due degrees that are locked', () => {
+    // Level 4 entered cold unlocks 1, 5 and 7; 4 is still locked, so being due
+    // must not pull it into the session.
     const { questions } = scaleDegreesGenerator.generate(
       input({
         level: 4,
         count: 30,
-        dueItemKeys: [scaleDegreeItemKey('7')],
-        settings: settings({ unlockedChoices: 2 }),
+        dueItemKeys: [scaleDegreeItemKey('4')],
+        settings: settings({ unlockedChoiceIds: unlockedChoiceIds(4, 3, false) }),
       }),
     );
     for (const question of questions) {
-      expect(['1', '2']).toContain(question.correctChoiceId);
+      expect(['1', '5', '7']).toContain(question.correctChoiceId);
     }
   });
 

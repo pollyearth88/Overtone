@@ -58,11 +58,15 @@ export interface GeneratorSettings {
    */
   playReference?: boolean;
   /**
-   * How many of the level's answer choices the user has earned, from the
-   * learning engine's adaptive rule. Omitted means "all of them" — which is
-   * what a level test, the daily challenge and `/dev/sound` want.
+   * Which answer choices the user has earned, by `AnswerChoice.id`. Omitted
+   * means "all of them" — which is what a level test, the daily challenge and
+   * `/dev/sound` want.
+   *
+   * An explicit list rather than a count, because what a given amount of
+   * progress unlocks depends on the level and on whether the user earned their
+   * way in; working that out is the mode's job, not the generator's caller's.
    */
-  unlockedChoices?: number;
+  unlockedChoiceIds?: readonly string[];
   /** Fix the instrument instead of rotating. Used by `/dev/sound` and Listen mode. */
   fixedInstrument?: InstrumentId;
   /** Fix the key instead of rotating. */

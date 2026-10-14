@@ -9,7 +9,7 @@ import { Chip } from '@/components/ui/Chip';
 import { getAudioEngine } from '@/lib/audio/ToneAudioEngine';
 import { concatEvents, type AudioEvent } from '@/lib/audio/events';
 import { REFERENCE_INSTRUMENT } from '@/lib/modes/sound';
-import { buildKeyReference, levelSpec } from '@/lib/modes/scaleDegrees';
+import { buildKeyReference, levelDegrees, levelSpec } from '@/lib/modes/scaleDegrees';
 import { DEGREE_FEEL, degreeLabel, degreeToNote, solfege, type Degree } from '@/lib/theory/degrees';
 import { MAJOR_KEYS, MINOR_KEYS, keyLabel, type Key } from '@/lib/theory/keys';
 import { createRng } from '@/lib/rng';
@@ -45,6 +45,7 @@ interface Step {
  */
 export function ListenMode({ level }: ListenModeProps) {
   const spec = levelSpec(level);
+  const degrees = levelDegrees(level);
   const [playing, setPlaying] = useState(false);
   const [step, setStep] = useState<Step | null>(null);
   const [cycle, setCycle] = useState(0);
@@ -89,7 +90,9 @@ export function ListenMode({ level }: ListenModeProps) {
         if (!key) break;
         keyRef.current = key;
 
-        const order = rng.shuffle(spec.degrees);
+        // Recomputed here rather than closed over: a fresh array each render
+        // would make this callback unstable and restart the loop.
+        const order = rng.shuffle(levelDegrees(level));
 
         for (let i = 0; i < order.length; i += 1) {
           if (!playingRef.current) break;
@@ -171,7 +174,7 @@ export function ListenMode({ level }: ListenModeProps) {
 
       <div className="flex flex-wrap gap-2">
         <Chip>{spec.label}</Chip>
-        <Chip>{spec.degrees.length} degrees</Chip>
+        <Chip>{degrees.length} degrees</Chip>
         {step?.withCadence ? <Chip tone="accent">cadence</Chip> : null}
       </div>
 

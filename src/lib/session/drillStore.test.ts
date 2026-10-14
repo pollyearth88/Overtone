@@ -46,6 +46,7 @@ vi.mock('../audio/ToneAudioEngine', () => ({
 
 const { useDrillStore } = await import('./drillStore');
 const { getDataStore } = await import('../data/LocalStore');
+const { newSkillProgress } = await import('../learning/progress');
 const { LEVEL_TEST_QUESTION_COUNT, PRACTICE_QUESTION_COUNT } = await import('../learning/mastery');
 
 /** Answers the current question correctly or not, then advances. */
@@ -100,15 +101,50 @@ describe('the drill session', () => {
       await useDrillStore.getState().start({ level: 3, kind: 'practice', seed: 'fixed' });
       const progress = await getDataStore().getSkillProgress('scaleDegrees');
       expect(progress?.level).toBe(3);
-      expect(progress?.unlockedChoices).toBe(2);
+      // Nothing mastered below it, so level 3 opens cold with its starter set:
+      // 1, 5 and its first new degree, 6.
+      expect(progress?.unlockedChoices).toBe(3);
+    });
+
+    it('opens a level cold with 1, 5 and its first new degree', async () => {
+      await useDrillStore.getState().start({ level: 4, kind: 'practice', seed: 'fixed' });
+      const asked = new Set(
+        useDrillStore.getState().questions.map((question) => question.correctChoiceId),
+      );
+      for (const degree of asked) expect(['1', '5', '7']).toContain(degree);
+    });
+
+    it('carries mastered degrees forward instead of restarting at two', async () => {
+      // Master level 5, then open level 6: the seven major degrees should come
+      // with it, plus b7 — not a reset to 1 vs b2.
+      const store = getDataStore();
+      const seeded = await store.getSkillProgress('scaleDegrees');
+      await store.saveSkillProgress({
+        ...(seeded ?? newSkillProgress('scaleDegrees')),
+        level: 5,
+        masteredLevels: [5],
+        highestUnlockedLevel: 6,
+      });
+
+      await useDrillStore.getState().start({ level: 6, kind: 'practice', seed: 'fixed' });
+      const progress = await store.getSkillProgress('scaleDegrees');
+      expect(progress?.unlockedChoices).toBe(8);
+
+      const unlocked = useDrillStore
+        .getState()
+        .questions[0]!.choices.filter((choice) => !choice.locked)
+        .map((choice) => choice.id);
+      expect(unlocked).toContain('b7');
+      expect(unlocked).not.toContain('b2');
     });
 
     it('limits practice to unlocked choices but tests to the whole level', async () => {
       await useDrillStore.getState().start({ level: 4, kind: 'practice', seed: 'fixed' });
       const practice = useDrillStore.getState().questions;
+      // Cold open at level 4 unlocks three: 1, 5 and the first new degree.
       expect(
         new Set(practice.map((question) => question.correctChoiceId)).size,
-      ).toBeLessThanOrEqual(2);
+      ).toBeLessThanOrEqual(3);
 
       await useDrillStore.getState().start({ level: 4, kind: 'test', seed: 'fixed' });
       const test = useDrillStore.getState().questions;
@@ -261,8 +297,9 @@ describe('the drill session', () => {
       await useDrillStore.getState().start({ level: 4, kind: 'test', seed: 'fixed' });
       await answerAll(() => true);
       const progress = await getDataStore().getSkillProgress('scaleDegrees');
-      // Passing the test unlocks the next level, but never adds choices.
-      expect(progress?.unlockedChoices).toBe(2);
+      // Passing the test unlocks the next level, but never adds choices: level
+      // 4 opened cold with three and still has three.
+      expect(progress?.unlockedChoices).toBe(3);
     });
   });
 

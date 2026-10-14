@@ -134,20 +134,25 @@ export function applyLevelTest(input: ApplyTestInput): ApplyTestResult {
 }
 
 /**
- * Moving to a different level. Choices reset to the starting two, because the
- * level's answer set is different — having earned all seven major degrees says
- * nothing about being ready for all twelve chromatic ones.
+ * Moving to a different level.
+ *
+ * Choices reset to that level's **starter count**, which the mode works out —
+ * it is not a flat two. A level starts with everything the previous level ended
+ * with plus its first new item, so someone who has mastered level 5 arrives at
+ * level 6 with the seven major degrees already in play rather than being asked
+ * to tell `1` from `b2`.
  */
 export function setLevel(
   progress: SkillProgress,
   level: number,
+  starterChoices: number,
   now: Date = new Date(),
 ): SkillProgress {
   if (progress.level === level) return progress;
   return {
     ...progress,
     level,
-    unlockedChoices: STARTING_CHOICES,
+    unlockedChoices: Math.max(STARTING_CHOICES, starterChoices),
     choicesUnlockedAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

@@ -247,17 +247,23 @@ describe('applyLevelTest', () => {
 });
 
 describe('setLevel', () => {
-  it('resets choices to the starting two, because the answer set changed', () => {
+  it('resets choices to the starter count it is handed, not a flat two', () => {
     const start = { ...newSkillProgress('scaleDegrees', NOW), unlockedChoices: 7 };
-    const moved = setLevel(start, 6, LATER);
+    const moved = setLevel(start, 6, 8, LATER);
     expect(moved.level).toBe(6);
-    expect(moved.unlockedChoices).toBe(STARTING_CHOICES);
+    expect(moved.unlockedChoices).toBe(8);
     expect(moved.choicesUnlockedAt).toBe(LATER.toISOString());
+  });
+
+  it('never drops below the two-choice floor, whatever it is handed', () => {
+    const start = newSkillProgress('scaleDegrees', NOW);
+    expect(setLevel(start, 4, 0, LATER).unlockedChoices).toBe(STARTING_CHOICES);
+    expect(setLevel(start, 4, 1, LATER).unlockedChoices).toBe(STARTING_CHOICES);
   });
 
   it('is a no-op when already on that level, so progress is not lost', () => {
     const start = { ...newSkillProgress('scaleDegrees', NOW), unlockedChoices: 5 };
-    const same = setLevel(start, 1, LATER);
+    const same = setLevel(start, 1, 2, LATER);
     expect(same).toBe(start);
     expect(same.unlockedChoices).toBe(5);
   });
@@ -268,7 +274,7 @@ describe('setLevel', () => {
       masteredLevels: [1, 2],
       highestUnlockedLevel: 3,
     };
-    const moved = setLevel(start, 3, LATER);
+    const moved = setLevel(start, 3, 4, LATER);
     expect(moved.masteredLevels).toEqual([1, 2]);
     expect(moved.highestUnlockedLevel).toBe(3);
   });

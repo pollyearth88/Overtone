@@ -9,7 +9,12 @@ import { getDataStore } from '@/lib/data/LocalStore';
 import { ADAPTIVE_WINDOW, adaptiveReadiness } from '@/lib/learning/adaptive';
 import { levelProgress } from '@/lib/learning/mastery';
 import { isLevelMastered, newSkillProgress } from '@/lib/learning/progress';
-import { levelChoiceCount, scaleDegreesGenerator } from '@/lib/modes/scaleDegrees';
+import {
+  carriesForwardInto,
+  levelChoiceCount,
+  levelStarterCount,
+  scaleDegreesGenerator,
+} from '@/lib/modes/scaleDegrees';
 import type { SkillSummary } from '@/lib/mock/home';
 
 export interface SkillListProps {
@@ -86,6 +91,10 @@ export function SkillList({ placeholders }: SkillListProps) {
       if (cancelled) return;
 
       const totalChoices = levelChoiceCount(progress.level);
+      const starterChoices = levelStarterCount(
+        progress.level,
+        carriesForwardInto(progress.level, progress.masteredLevels),
+      );
       setScaleDegrees({
         mode: 'scaleDegrees',
         name: 'Scale degrees',
@@ -94,6 +103,7 @@ export function SkillList({ placeholders }: SkillListProps) {
         progress: levelProgress({
           unlockedChoices: progress.unlockedChoices,
           totalChoices,
+          starterChoices,
           readiness: adaptiveReadiness({
             answers: [...recent].reverse(),
             unlockedChoices: progress.unlockedChoices,

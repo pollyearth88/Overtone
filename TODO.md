@@ -82,12 +82,47 @@ Phase status lives in `CLAUDE.md`. This is the task-level view.
 - [x] Tests: adaptive rules, Leitner scheduling, mastery/scoring, progress
       composition, the generator, `LocalStore`, and the session flow — 489 total
 
+## Phase 3 follow-ups — level starts + timing (done)
+
+- [x] A level now starts with everything the previous level ended with (mastered
+      degrees carry forward) plus that level's first new item, instead of
+      resetting to two options. Level 6 no longer opens on `1` vs `♭2`.
+- [x] Chromatic unlock order, easiest first: `♭7, ♭3, ♭6, #4, ♭2`
+- [x] Minor keys carry the natural-minor re-voicings of what was mastered in
+      major (`3→♭3`, `6→♭6`, `7→♭7`), then add the raised 7th and raised 6th —
+      nine degrees, not twelve
+- [x] Opening a level cold gets its starter set: `1`, `5` and the level's first
+      new degree. Never two notes a half step apart.
+- [x] `SkillProgress.unlockedChoices` stays a count; the _set_ it unlocks is
+      derived in one place (`unlockedDegrees`) from level + count + whether the
+      user earned their way in. `GeneratorSettings` now takes
+      `unlockedChoiceIds` rather than a bare count.
+- [x] Learn screen shows "X of Y answers unlocked · N carried forward" and
+      explains both entry paths
+- [x] Tests: no level opens with only two options a half step apart; every
+      opening set spans at least a fifth; carried-forward degrees appear on the
+      next level; the chromatic and minor unlock orders; cold-open starter sets
+- [x] Timings checked by ear and kept: cadence gap ~0.55 s, auto-advance 1400 ms.
+      Both are now `DrillSettings` fields (`cadenceGapMs`, `autoAdvanceMs`), and
+      the cadence's own trailing silence was moved out so the gap lives in one
+      place and the setting cannot lie about its value.
+- [x] Split the Vitest config into `logic` (node) and `components` (jsdom)
+      projects. 22 jsdom instances had started exhausting worker memory on
+      Windows (`0xC00000FD`), failing a different file each run; the suite now
+      runs in ~5 s instead of ~13 s.
+
 ### Carried into Phase 4
 
-- [ ] The drill has been verified by test and by route smoke-check, **not yet by
-      ear end-to-end** — play a full session and check the audio timing feels right.
-- [ ] `DEFAULT_DRILL_SETTINGS` hard-codes all five instruments and
-      `autoAdvance: true`. Phase 4's Settings page should own these.
+- [ ] The drill has been verified by test and by route smoke-check; the two
+      timings are now confirmed by ear, but a full end-to-end session on the new
+      level-start behaviour has not been played yet.
+- [ ] `DEFAULT_DRILL_SETTINGS` hard-codes all five instruments, `autoAdvance`,
+      `autoAdvanceMs` and `cadenceGapMs`. Phase 4's Settings page should own all
+      four.
+- [ ] `unlockedChoices` is stored per _mode_, not per level, so leaving a level
+      and returning resets it to that level's starter count. Harmless now that
+      the starter carries forward, but per-level storage would be more honest —
+      and the spec's `skill_progress.unlocked_choices` column is already `json`.
 - [ ] Streak, daily challenge and friend-challenge rows on Home are still mock
       (`src/lib/mock/home.ts`) — Phases 6 and 7.
 - [ ] `levelProgress` caps at 70% until the level test is passed. Worth a look

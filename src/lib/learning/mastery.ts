@@ -149,6 +149,12 @@ export function weakestItems(answers: readonly BreakdownAnswer[], limit = 3): It
 export interface LevelProgressInput {
   unlockedChoices: number;
   totalChoices: number;
+  /**
+   * How many choices this level opened with. Not a constant: a level starts
+   * with everything the one below it ended with, so the bar should not show
+   * carried-forward choices as though they were earned here.
+   */
+  starterChoices?: number;
   /** Readiness for the next choice, 0-1, from `adaptiveReadiness`. */
   readiness: number;
   /** Whether this level's test has been passed. */
@@ -166,8 +172,9 @@ export function levelProgress(input: LevelProgressInput): number {
   const { unlockedChoices, totalChoices, readiness, mastered } = input;
   if (mastered) return 100;
 
-  const earnable = Math.max(1, totalChoices - STARTING_CHOICES);
-  const earned = Math.max(0, unlockedChoices - STARTING_CHOICES);
+  const starter = input.starterChoices ?? STARTING_CHOICES;
+  const earnable = Math.max(1, totalChoices - starter);
+  const earned = Math.max(0, unlockedChoices - starter);
 
   if (unlockedChoices >= totalChoices) {
     // All choices earned: the remaining 30% is the level test, which the user
